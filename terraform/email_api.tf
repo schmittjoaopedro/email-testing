@@ -69,11 +69,11 @@ resource "aws_iam_role_policy" "lambda_policies" {
 
 resource "null_resource" "run_build_script" {
   provisioner "local-exec" {
-    # Execute the build.sh script
+    # Runs a custom shell script to generate the Go binary to be deployed in the Lambda function
     command = "cd email_api && ./build.sh"
   }
   triggers = {
-    # When hash of file email_api/main.go or email_api/go.mod changes
+    # Re-build the binary if the source code changes
     always_run = "${sha1(file("email_api/main.go"))}-${sha1(file("email_api/go.mod"))}"
   }
 }
@@ -89,7 +89,7 @@ resource "aws_lambda_function" "email_testing_lambda" {
   filename      = data.archive_file.lambda_zip.output_path
   function_name = "email_testing_lambda"
   role          = aws_iam_role.email_testing_lambda.arn
-  handler       = "bootstrap"
+  handler       = "bootstrap" # GoLang projects must set handler as bootstrap
   timeout       = 30
   memory_size   = 1024
 
@@ -108,12 +108,12 @@ resource "aws_lambda_function" "email_testing_lambda" {
 
 resource "aws_api_gateway_rest_api" "email_testing" {
   name        = "email-testing-api"
-  description = "API Gateway for SES email testing tool"
+  description = "Email testing API"
 
   body = jsonencode({
     openapi = "3.0.1"
     info    = {
-      title   = "SES Email Testing Tool"
+      title   = "Email Testing API"
       version = "1.0-${aws_lambda_function.email_testing_lambda.source_code_hash}"
     }
     paths = {

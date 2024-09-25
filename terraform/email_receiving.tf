@@ -1,14 +1,14 @@
+# This is the email domain identity used to receive emails by this testing tool.
+# For example all emails sent to: <any-email>@email-testing.example.com.
 resource "aws_ses_domain_identity" "email_testing" {
   domain = local.email_domain
 }
 
+# DKIM verification records to be added to the Route53.
+# This records are used to sign emails sent from this domain. Service providers like gmail
+# use this signatures to validate the email is coming from this domain and was not tampered.
 resource "aws_ses_domain_dkim" "email_testing" {
   domain = aws_ses_domain_identity.email_testing.domain
-}
-
-resource "aws_ses_domain_mail_from" "email_testing_mail_from" {
-  domain           = aws_ses_domain_identity.email_testing.domain
-  mail_from_domain = "bounce.${local.email_domain}"
 }
 
 resource "aws_route53_record" "dkim_verification_record" {
@@ -20,6 +20,13 @@ resource "aws_route53_record" "dkim_verification_record" {
   records = ["${aws_ses_domain_dkim.email_testing.dkim_tokens[count.index]}.dkim.amazonses.com"]
 }
 
+# Mail from is used to define the DNS where feedback can be sent for each sent email.
+resource "aws_ses_domain_mail_from" "email_testing_mail_from" {
+  domain           = aws_ses_domain_identity.email_testing.domain
+  mail_from_domain = "bounce.${local.email_domain}"
+}
+
+# MX record to specify that AWS SES service will process all emails sent to this domain.
 resource "aws_route53_record" "email_inbound_mx" {
   zone_id = local.route53_zone
   type    = "MX"
@@ -28,6 +35,7 @@ resource "aws_route53_record" "email_inbound_mx" {
   records = ["10 inbound-smtp.${data.aws_region.current.name}.amazonaws.com"]
 }
 
+# Defines SPF policy for the domain. Also defines how to handle spam emails.
 resource "aws_route53_record" "email_inbound_txt" {
   zone_id = local.route53_zone
   type    = "TXT"
@@ -37,6 +45,7 @@ resource "aws_route53_record" "email_inbound_txt" {
 }
 
 
+# Indicates that AWS SES service is allowed to send emails on behalf of this domain.
 resource "aws_route53_record" "email_testing_bounce_policy" {
   zone_id = local.route53_zone
   type    = "TXT"
@@ -45,6 +54,7 @@ resource "aws_route53_record" "email_testing_bounce_policy" {
   records = ["v=spf1 include:amazonses.com ~all"]
 }
 
+# Defines a MX record to redirect bounce emails to AWS SES service.
 resource "aws_route53_record" "email_testing_bounce_server" {
   zone_id = local.route53_zone
   type    = "MX"
@@ -66,6 +76,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "email_testing" {
   bucket = aws_s3_bucket.email_testing.bucket
 
   rule {
+    # Clear the bucket every day to keep costs low and to keep lambda performant.
     id      = "expire-all-objects"
     status  = "Enabled"
 
@@ -97,6 +108,7 @@ resource "aws_s3_bucket_policy" "email_testing" {
   })
 }
 
+# Configure AWS SES to store the received emails in the S3 bucket as mime files.
 resource "aws_ses_receipt_rule_set" "email_testing_receive_rule_set" {
   rule_set_name = "${local.email_prefix}-receive-rule-set"
 }

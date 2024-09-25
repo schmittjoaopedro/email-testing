@@ -4,11 +4,11 @@
 ## Running the project
 
 The lambda function was developed in Go and to compile it this project is using Docker. This is so because for MacOS and
-Windows users the go binary has to be generated for linux compatible images to it can be run in lambda. So make sure you
+Windows users the go binary has to be generated for linux compatible images, so it can run in lambda linux. Make sure you 
 have Docker installed and running on your machine.
 
-During terraform apply it might fail because it takes some time to verify the ACM certificate. If that happens wait a bit
-and run the command again.
+Terraform apply it might fail in the middle of the process because it takes some time to verify the ACM certificate. If 
+that happens, wait a minute, and then run the command again.
 
 ```shell
 # Check docker is running

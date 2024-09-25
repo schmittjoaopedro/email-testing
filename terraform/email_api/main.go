@@ -24,16 +24,13 @@ import (
 	"time"
 )
 
-/**
- * Thanks to:
- * - https://github.com/kirabou/parseMIMEemail.go
- */
-
+// For more details refer to: https://github.com/kirabou/parseMIMEemail.go
 var s3BucketName string
 var s3Client *s3.Client
 var ssmApiKeyName string
 var ssmClient *ssm.Client
 
+// Cache clients to they are initialized only once
 func init() {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -66,6 +63,9 @@ type Email struct {
 	Attachments []Attachment
 }
 
+/**
+ * Extract part content (text, html, attachments) and write to emailResponse
+ */
 func writePart(part *multipart.Part, emailResponse *Email) error {
 
 	filename := part.FileName()
@@ -123,6 +123,11 @@ func writePart(part *multipart.Part, emailResponse *Email) error {
 	return nil
 }
 
+/**
+ * Recursively process all parts of the email.
+ * An email MIME file is formed of a tree structure of parts.
+ * Depending on the email sender, the tree structure will vary.
+ */
 func parsePart(mimeData io.Reader, boundary string, emailResponse *Email) error {
 
 	reader := multipart.NewReader(mimeData, boundary)
@@ -140,6 +145,7 @@ func parsePart(mimeData io.Reader, boundary string, emailResponse *Email) error 
 			return err
 		}
 
+		// multipart/* media type indicates there are other sub-parts under this part
 		mediaType, params, err := mime.ParseMediaType(newPart.Header.Get("Content-Type"))
 		if err == nil && strings.HasPrefix(mediaType, "multipart/") {
 			err = parsePart(newPart, params["boundary"], emailResponse)
@@ -147,6 +153,7 @@ func parsePart(mimeData io.Reader, boundary string, emailResponse *Email) error 
 				return err
 			}
 		} else {
+			// No multipart/* media type indicates this is a leaf part (content)
 			err = writePart(newPart, emailResponse)
 			if err != nil {
 				return err
@@ -157,6 +164,9 @@ func parsePart(mimeData io.Reader, boundary string, emailResponse *Email) error 
 	return nil
 }
 
+/**
+ * Find amongst all emails read from S3 objects the latest one sent to the recipient.
+ */
 func findLatestEmail(emailBytes map[string][]byte, recipientEmail string) (*Email, error) {
 
 	var emailResponse *Email = nil
@@ -182,7 +192,8 @@ func findLatestEmail(emailBytes map[string][]byte, recipientEmail string) (*Emai
 		date := msg.Header.Get("Date")
 		contentType := msg.Header.Get("Content-Type")
 
-		// Check if the recipient is the same as the one we are looking for
+		// Check if the recipient is the same as the one we are looking for, then stop
+		// search because this is the most recent email received by the recipient.
 		if strings.Contains(to, recipientEmail) {
 			emailResponse = &Email{
 				From:        from,
@@ -196,6 +207,8 @@ func findLatestEmail(emailBytes map[string][]byte, recipientEmail string) (*Emai
 
 	}
 
+	// Only process email parts if we found the email we are looking for
+	// otherwise return nil. This makes the function more efficient.
 	if msg != nil && emailResponse != nil {
 		mediaType, params, err := mime.ParseMediaType(emailResponse.ContentType)
 		if err != nil {
@@ -205,7 +218,7 @@ func findLatestEmail(emailBytes map[string][]byte, recipientEmail string) (*Emai
 			return nil, fmt.Errorf("email is not multipart")
 		}
 
-		// iterate over all the parts of the email
+		// Send the email response to be populated with the email parts
 		err = parsePart(msg.Body, params["boundary"], emailResponse)
 		if err != nil {
 			return nil, err
@@ -215,6 +228,10 @@ func findLatestEmail(emailBytes map[string][]byte, recipientEmail string) (*Emai
 	return emailResponse, nil
 }
 
+/**
+ * Get all emails from S3 bucket that were received after a certain date.
+ * Return a map of email file names and their content in bytes.
+ */
 func getAllEmailsBackToDate(utcReceivedAfter string) (map[string][]byte, error) {
 	// Convert string to time
 	utcReceivedAfterTime, err := time.Parse(time.RFC3339, utcReceivedAfter)
@@ -233,7 +250,8 @@ func getAllEmailsBackToDate(utcReceivedAfter string) (map[string][]byte, error) 
 		return contents[i].LastModified.After(*contents[j].LastModified)
 	})
 
-	// Iterate over all objects in the bucket
+	// Iterate over all objects in the bucket and select only the ones
+	// received after the specified date
 	emailBytes := make(map[string][]byte)
 	for _, object := range contents {
 		if object.LastModified.After(utcReceivedAfterTime) {
@@ -247,7 +265,7 @@ func getAllEmailsBackToDate(utcReceivedAfter string) (map[string][]byte, error) 
 				return nil, err
 			}
 
-			// Read object into by array
+			// Read object byte array and store in map with the object key
 			objectBytes, err := io.ReadAll(objectOutput.Body)
 			if err != nil {
 				return nil, err
@@ -278,7 +296,8 @@ func validateAuthorization(request events.APIGatewayProxyRequest) (bool, error) 
 	if authorization == "" {
 		return false, nil
 	}
-	// Replace Bearer with empty string
+	// Replace auth keywords with empty string, this authentication is flexible because
+	// accepts sending the token as Bearer, Basic, or just the token itself.
 	var requestToken string
 	requestToken = strings.Replace(authorization, "Bearer ", "", 1)
 	requestToken = strings.Replace(authorization, "Basic ", "", 1)
