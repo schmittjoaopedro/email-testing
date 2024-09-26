@@ -84,7 +84,7 @@ terraform apply \
   -var route53_domain_name="$ROUTE_53_DOMAIN_NAME" \
   -var aws_region="$AWS_REGION"
   
-# Test the application is working
+# Test the application is working, follow the prompts
 cd ..
 
 pip install -r requirements.txt
