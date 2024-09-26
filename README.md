@@ -117,7 +117,7 @@ Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
 
 The following video shows how to run the project:
 
-[![Demo Email Testing](assets/sample.mp4)](assets/sample.mp4)
+https://github.com/user-attachments/assets/83f3dc83-210e-40fa-9e74-b1539b11a754
 
 ## Cost analysis
 
