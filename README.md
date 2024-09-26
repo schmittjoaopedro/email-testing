@@ -183,3 +183,7 @@ Lambda costs - With Free Tier (monthly): 0.00 USD
 REST API cost (monthly): 0.07 USD
 Total cost: 4.73 USD
 ```
+
+## Conclusion
+
+This solution is a cost-effective way to test emails sent from your application. It's fully automated and can be integrated into your CI/CD pipeline. The solution is fully serverless and can scale to any number of emails sent. The cost of this solution is around 4.73 USD per month for 20,000 emails sent. This solution is a good alternative to expensive email testing tools like Mailosaur and Mailtrap.
