@@ -115,6 +115,12 @@ Body Text: Test Body
 Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
 ```
 
+The following video shows how to run the project:
+
+<video width="320" height="240" controls>
+  <source src="assets/sample.webm" type="video/webm">
+</video>
+
 ## Cost analysis
 
 This analysis used the AWS cost calculator and `us-east-1` region. For the sake of this analysis lets also assume email testing with 20000 emails per month, each email with an average size of 300kb. In summary for this scenario, the total cost of this solution would be around **4.73 USD** per month.
