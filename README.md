@@ -117,10 +117,7 @@ Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
 
 The following video shows how to run the project:
 
-<video width="600" controls>
-  <source src="assets/sample.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://github.com/user-attachments/assets/83f3dc83-210e-40fa-9e74-b1539b11a754
 
 ## Cost analysis
 
