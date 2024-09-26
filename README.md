@@ -53,7 +53,7 @@ Solution highlights:
 
 ## The implementation
 
-You can see all the implementation details in the following repository: https://github.com/schmittjoaopedro/email-testing
+The implementation is available in this repo: https://github.com/schmittjoaopedro/email-testing
 
 ### Running the project
 
