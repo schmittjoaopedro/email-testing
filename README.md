@@ -117,9 +117,7 @@ Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
 
 The following video shows how to run the project:
 
-<video width="320" height="240" controls>
-  <source src="assets/sample.webm" type="video/webm">
-</video>
+[![Demo Email Testing](assets/sample.mp4)](assets/sample.mp4)
 
 ## Cost analysis
 
