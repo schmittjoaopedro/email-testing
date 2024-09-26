@@ -61,6 +61,8 @@ The lambda function runs in Go. To compile the source code you need Docker. This
 
 The command `terraform apply` might fail in the middle of the execution because it takes some time to verify the ACM certificate in AWS. Therefore, if you happen to get this error, wait a minute, and then try the command again.
 
+The domain name set below in the env var `ROUTE_53_DOMAIN_NAME` is your root domain name (e.g.: `mycompany.com`). Change the subdomain name in the `locals.email_prefix` in `config.tf` as you wish.
+
 ```shell
 # Check docker is running
 docker --version
