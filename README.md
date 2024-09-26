@@ -1,10 +1,10 @@
 # Automated Email Testing using AWS SES, S3, Lambda, and API Gateway
 
-If your application send emails it's important to test them. Testing emails include verifying recipient, subject, body, and attachments. E-mail testing is challenging because it's not as trivial as testing code in your app. Tools like Mailosaur and Mailtrap provide a huge amount of features to help you with your testing. However, these tools are to some degree expensive depending on your current available budget. If you don't need a blasting expensive e-mail testing tool, this AWS solution might be suitable for you.
+If your application sends emails it's important to test them. Testing emails includes verifying the recipient, subject, body, and attachments. E-mail testing is challenging because it's not as trivial as testing code in your app. Tools like Mailosaur and Mailtrap provide a lot of features to help you with your testing. However, these tools are to some degree expensive depending on your currently available budget. If you don't need a blasting expensive e-mail testing tool, this AWS solution might best suit your needs.
 
 ## The Problem
 
-How can you verify the e-mails sent from your application contain correct recipient, subject, body, and attachments in an automated way? Let's say you have an integration test pipeline which runs every time you push changes to the codebase. Basically we want a method like the `wait_receive_email` below to fetch the new emails for us. Notice in the code below that `start_time` is used to filter for emails sent after your test started.
+How can you verify the emails sent from your application contain the correct recipient, subject, body, and attachments in an automated way? Let's say you have an integration test pipeline that runs every time you push changes to the codebase. For this purpose, let's assume we want a method like the `wait_receive_email` below to fetch the new emails during tests (notice that `start_time` is used to filter only for emails sent after the test started).
 
 ```python
 def test_send_email():
@@ -20,7 +20,7 @@ def test_send_email():
     assert email['TEXTBody'] == "Welcome to My Company! We are glad to have you here."
 ```
 
-A cross-language simple way to implement this solution is by providing it via a simple REST API. The code below presents what we expect the interface of this API to look like. Notice we also include an `Authorization` header in the API to make it private only for the internal testing.
+A simple multi-language way to implement this solution is by providing a simple REST API. The code below presents what we expect the interface of this API to look like. Notice we also include an `Authorization` header in the API to make it private only for internal testing.
 
 ```python
 def wait_receive_email(recipient, start_time):
@@ -44,12 +44,12 @@ The solution proposed here is fully AWS compliant, it uses the following compone
 
 Solution highlights:
 
-- This solution sets a subdomain to receive emails `email-testing.mycompany.com`, this allows to isolate test emails and does not affect your main domain `mycompany.com` used for production emails.
-- This solution receives any email sent to any user at `email-testing.mycompany.com` and stores it in an S3 bucket. So you have total flexibility to set any emails for your tests, e.g.: `user1@email-testing.mycompany.com`, `user2@email-testing.mycompany.com`, etc...
+- This solution sets a subdomain to receive emails `email-testing.mycompany.com`. The benefit of using a subdomain is that it isolates your test emails from the production ones and does not affect your main domain `mycompany.com`.
+- This solution receives any email sent to any user at `email-testing.mycompany.com` and stores it in an S3 bucket, giving you total flexibility to use any email name for your tests, e.g.: `user1@email-testing.mycompany.com`, `user2@email-testing.mycompany.com`, etc...
 - This solution uses Lambda and API Gateway to be fully serverless, so you don't have to worry about scaling or maintaining servers.
-- The S3 bucket is configured to expire email files after 1 day to save on costs and maintain the lambda performant.
-- The code is implemented to keep pooling the bucket until the email is received or the request times out after 25 seconds. Therefore, both Lambda and API Gateway are aligned to this timeout limit.
-- The lambda is implemented in GoLang, if you are building this project from your local machine make sure you have Docker installed and running. This is necessary to build the Go binary for Linux from MacOS or Windows.
+- The S3 bucket is configured to expire email files after one day to save on costs and maintain the lambda fast.
+- The code is designed to keep pooling the bucket until the email is received or the request times out after 25 seconds. Therefore, both Lambda and API Gateway are configured to meet this timeout.
+- The lambda is implemented in GoLang, if you are building this project from your local machine make sure you have Docker installed and running. This is necessary to generate the Go binary for Linux from MacOS or Windows.
 
 ## The implementation
 
@@ -57,9 +57,9 @@ The implementation is available in this repo: https://github.com/schmittjoaopedr
 
 ### Running the project
 
-The lambda function was developed in Go and to compile it this project is using Docker. This is so because for MacOS and Windows users the go binary has to be generated for linux compatible images, so it can run in lambda linux. Make sure you have Docker installed and running on your machine.
+The lambda function runs in Go. To compile the source code you need Docker. This is required because MacOS and Windows users need to generate the binary to be Linux-compatible, as per the lambda OS. Therefore, make sure you have Docker installed and running on your machine.
 
-Terraform apply it might fail in the middle of the process because it takes some time to verify the ACM certificate. If that happens, wait a minute, and then run the command again.
+The command `terraform apply` might fail in the middle of the execution because it takes some time to verify the ACM certificate in AWS. Therefore, if you happen to get this error, wait a minute, and then try the command again.
 
 ```shell
 # Check docker is running
