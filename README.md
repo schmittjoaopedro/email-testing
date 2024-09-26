@@ -42,14 +42,24 @@ The solution proposed here is fully AWS compliant, it uses the following compone
 
 ![Architecture](assets/EmailTesting.png)
 
-## Running the project
+Solution highlights:
 
-The lambda function was developed in Go and to compile it this project is using Docker. This is so because for MacOS and
-Windows users the go binary has to be generated for linux compatible images, so it can run in lambda linux. Make sure you
-have Docker installed and running on your machine.
+- This solution sets a subdomain to receive emails `email-testing.mycompany.com`, this allows to isolate test emails and does not affect your main domain `mycompany.com` used for production emails.
+- This solution receives any email sent to any user at `email-testing.mycompany.com` and stores it in an S3 bucket. So you have total flexibility to set any emails for your tests, e.g.: `user1@email-testing.mycompany.com`, `user2@email-testing.mycompany.com`, etc...
+- This solution uses Lambda and API Gateway to be fully serverless, so you don't have to worry about scaling or maintaining servers.
+- The S3 bucket is configured to expire email files after 1 day to save on costs and maintain the lambda performant.
+- The code is implemented to keep pooling the bucket until the email is received or the request times out after 25 seconds. Therefore, both Lambda and API Gateway are aligned to this timeout limit.
+- The lambda is implemented in GoLang, if you are building this project from your local machine make sure you have Docker installed and running. This is necessary to build the Go binary for Linux from MacOS or Windows.
 
-Terraform apply it might fail in the middle of the process because it takes some time to verify the ACM certificate. If
-that happens, wait a minute, and then run the command again.
+## The implementation
+
+You can see all the implementation details in the following repository: https://github.com/schmittjoaopedro/email-testing
+
+### Running the project
+
+The lambda function was developed in Go and to compile it this project is using Docker. This is so because for MacOS and Windows users the go binary has to be generated for linux compatible images, so it can run in lambda linux. Make sure you have Docker installed and running on your machine.
+
+Terraform apply it might fail in the middle of the process because it takes some time to verify the ACM certificate. If that happens, wait a minute, and then run the command again.
 
 ```shell
 # Check docker is running
@@ -101,4 +111,75 @@ Size: 4810
 Attachments: 0
 Body Text: Test Body
 Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
+```
+
+## Cost analysis
+
+This analysis used the AWS cost calculator and `us-east-1` region. For the sake of this analysis lets also assume email testing with 20000 emails per month, each email with an average size of 300kb. In summary for this scenario, the total cost of this solution would be around **4.73 USD** per month.
+
+```text
+SES
+--------
+20,000 messages per month x 0.0001 USD = 2.00 USD (Messages received cost)
+300 KB / 256 chunk size factor = 1.171875 chunk size in 256KB
+RoundDown (1.171875) = 1 billable chunk factor
+20,000 messages per month x 1 billable chunk factor x 0.00009 USD = 1.80 USD (Email chunks received cost)
+2.00 USD + 1.80 USD = 3.80 USD SES usage cost
+SES usage cost (monthly): 3.80 USD
+
+S3
+--------
+Tiered price for: 6 GB
+6 GB x 0.023 USD = 0.14 USD
+Total tier cost = 0.138 USD (S3 Standard storage cost)
+20,000 PUT requests for S3 Standard Storage x 0.000005 USD per request = 0.10 USD (S3 Standard PUT requests cost)
+200,000 GET requests in a month x 0.0000004 USD per request = 0.08 USD (S3 Standard GET requests cost)
+0.138 USD + 0.08 USD + 0.10 USD = 0.32 USD (Total S3 Standard Storage, data requests, S3 select cost)
+S3 Standard cost (monthly): 0.32 USD
+
+Inbound:
+Internet: 6 GB x 0 USD per GB = 0.00 USD
+Outbound:
+Internet: 6 GB x 0.09 USD per GB = 0.54 USD
+Data Transfer cost (monthly): 0.54 USD
+
+Lambda
+--------
+Unit conversions
+Amount of memory allocated: 128 MB x 0.0009765625 GB in a MB = 0.125 GB
+Amount of ephemeral storage allocated: 512 MB x 0.0009765625 GB in a MB = 0.5 GB
+Pricing calculations
+20,000 requests x 30,000 ms x 0.001 ms to sec conversion factor = 600,000.00 total compute (seconds)
+0.125 GB x 600,000.00 seconds = 75,000.00 total compute (GB-s)
+75,000.00 GB-s - 400000 free tier GB-s = -325,000.00 GB-s
+Max (-325000.00 GB-s, 0 ) = 0.00 total billable GB-s
+Tiered price for: 0.00 GB-s
+Total tier cost = 0.00 USD (monthly compute charges)
+Monthly compute charges: 0.00 USD
+20,000 requests - 1000000 free tier requests = -980,000 monthly billable requests
+Max (-980000 monthly billable requests, 0 ) = 0.00 total monthly billable requests
+Monthly request charges: 0 USD
+0.50 GB - 0.5 GB (no additional charge) = 0.00 GB billable ephemeral storage per function
+Monthly ephemeral storage charges: 0 USD
+Lambda costs - With Free Tier (monthly): 0.00 USD
+
+API Gateway
+--------
+20,000 requests x 1 unit multiplier = 20,000 total REST API requests
+Tiered price for: 20,000 requests
+20,000 requests x 0.0000035 USD = 0.07 USD
+Total tier cost = 0.07 USD (REST API requests)
+Tiered price total for REST API requests: 0.07 USD
+0 USD per hour x 730 hours in a month = 0.00 USD for cache memory
+Dedicated cache memory total price: 0.00 USD
+REST API cost (monthly): 0.07 USD
+
+Total cost
+--------
+SES usage cost (monthly): 3.80 USD
+S3 Standard cost (monthly): 0.32 USD
+Data Transfer cost (monthly): 0.54 USD
+Lambda costs - With Free Tier (monthly): 0.00 USD
+REST API cost (monthly): 0.07 USD
+Total cost: 4.73 USD
 ```
