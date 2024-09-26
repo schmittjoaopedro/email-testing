@@ -117,7 +117,10 @@ Body HTML: <div dir=3D"ltr"><br clear=3D"all"><div>Test Body</div>...
 
 The following video shows how to run the project:
 
-[![Demo Email Testing](assets/sample.mp4)](assets/sample.mp4)
+<video width="600" controls>
+  <source src="assets/sample.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ## Cost analysis
 
